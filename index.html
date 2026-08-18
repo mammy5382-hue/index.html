@@ -1,4 +1,4 @@
-<<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
@@ -220,18 +220,16 @@
             }
         }
 
-        // วาดเส้นไกด์ตัวอย่างสระ ใ- แบบหนาโค้งมนตามภาพตัวอย่างใหม่
+        // วาดเส้นไกด์ตัวอย่างสระ ใ-
         function drawGuideTemplate(ctx) {
             ctx.save();
             let cx = canvasElement.width / 2 + 20;
             let cy = canvasElement.height / 2 - 20;
 
-            // วาดกรอบไกด์ฟ้าอ่อน
             ctx.strokeStyle = 'rgba(9, 132, 227, 0.4)';
             ctx.lineWidth = 6;
             ctx.strokeRect(cx - 70, cy - 120, 140, 240);
 
-            // วาดตัวสระ ใ- ทึบแสงจางๆ เป็นต้นแบบ
             ctx.strokeStyle = 'rgba(9, 132, 227, 0.3)';
             ctx.fillStyle = 'rgba(9, 132, 227, 0.15)';
             ctx.lineWidth = 18;
@@ -263,7 +261,7 @@
             }
 
             if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0 && gameState === 'DRAWING') {
-                statusText.innerText = "กำลังเขียน... วนหัวแล้วลากลงมาให้ตรงรอย!";
+                statusText.innerText = "กำลังเขียน... วนหัวแล้วลากลงมาให้ครบวงจร!";
                 statusText.style.color = "#e17055";
 
                 const landmarks = results.multiHandLandmarks[0];
@@ -273,7 +271,7 @@
                 const y = indexFingerTip.y * canvasElement.height;
 
                 drawingPoints.push({ x, y });
-                if (drawingPoints.length > 250) drawingPoints.shift();
+                if (drawingPoints.length > 300) drawingPoints.shift();
 
                 checkDrawingAccuracy();
             } else if (gameState === 'DRAWING') {
@@ -302,7 +300,8 @@
         }
 
         function checkDrawingAccuracy() {
-            if (drawingPoints.length > 60 && gameState === 'DRAWING') {
+            // เพิ่มเงื่อนไขให้ต้องวาดเส้นจำนวนพิกเซลและจุดเยอะพอสมควรถึงจะผ่าน (ป้องกันการตัดจบไวเกินไป)
+            if (drawingPoints.length > 120 && gameState === 'DRAWING') {
                 let minX = Math.min(...drawingPoints.map(p => p.x));
                 let maxX = Math.max(...drawingPoints.map(p => p.x));
                 let minY = Math.min(...drawingPoints.map(p => p.y));
@@ -311,10 +310,10 @@
                 let width = maxX - minX;
                 let height = maxY - minY;
 
-                if (width > 45 && height > 55) {
+                if (width > 60 && height > 80) {
                     let score = 5;
-                    if (width < 65 || height < 75) score = 4;
-                    if (drawingPoints.length < 75) score = 3;
+                    if (width < 80 || height < 100) score = 4;
+                    if (drawingPoints.length < 150) score = 3;
                     
                     triggerSuccessSequence(score);
                 }
@@ -333,7 +332,7 @@
 
             setTimeout(() => {
                 gameState = 'COUNTDOWN';
-                countdownTimer = 10; // ตั้งเวลานับถอยหลังเป็น 10 วินาที
+                countdownTimer = 10;
                 timerBadge.innerText = `ถ่ายรูปใน: ${countdownTimer}`;
 
                 countdownInterval = setInterval(() => {
@@ -363,7 +362,6 @@
             pCtx.drawImage(videoElement, -photoCanvas.width, 0, photoCanvas.width, photoCanvas.height);
             pCtx.restore();
 
-            // บันทึกรอยเส้นที่เขียนลงไปในรูปถ่ายด้วย
             pCtx.save();
             drawCurrentPath(pCtx);
             pCtx.restore();
@@ -372,13 +370,14 @@
             pCtx.strokeStyle = '#ff7675';
             pCtx.strokeRect(0, 0, photoCanvas.width, photoCanvas.height);
 
+            // เอาแถบข้อความคำศัพท์ออก เหลือแค่หัวข้อรูปผลงานสะอาดๆ
             pCtx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-            pCtx.fillRect(20, 20, photoCanvas.width - 40, 55);
+            pCtx.fillRect(20, 20, photoCanvas.width - 40, 50);
 
             pCtx.font = 'bold 22px "Sarabun", sans-serif';
             pCtx.fillStyle = '#d63031';
             pCtx.textAlign = 'center';
-            pCtx.fillText("⭐ ฝึกเขียนสระ ใ- แสนสนุก ⭐", photoCanvas.width / 2, 55);
+            pCtx.fillText("⭐ ฝึกเขียนสระ ใ- แสนสนุก ⭐", photoCanvas.width / 2, 52);
 
             let starStr = "";
             for(let i = 0; i < 5; i++) {
