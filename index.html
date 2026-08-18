@@ -147,7 +147,7 @@
     <p>ขั้นตอนที่ 1: ทำท่า <b>"กดไลก์ 👍"</b> เพื่อเริ่ม | ขั้นตอนที่ 2: ยกนิ้วชี้เขียนตามแบบ</p>
 
     <div class="app-container">
-        <video id="webcam" autoplay playsinline width="640" height="480"></video>
+        <video id="webcam" autoplay playsinline muted width="640" height="480"></video>
         <canvas id="output_canvas" width="640" height="480"></canvas>
         <div class="ui-overlay">
             <div class="badge" id="stepBadge">สถานะ: รอท่ากดไลก์ 👍</div>
@@ -155,7 +155,7 @@
         </div>
     </div>
 
-    <div class="status-box" id="statusText">กรุณาชูนิ้วโป้ง (กดไลก์ 👍) หน้ากล้องเพื่อปลดล็อกการเขียน</div>
+    <div class="status-box" id="statusText">กำลังเปิดกล้อง... กรุณากดยอมรับการใช้กล้อง</div>
 
     <div class="modal" id="resultModal">
         <div class="modal-content">
@@ -312,7 +312,7 @@
             canvasCtx.restore();
         }
 
-        function drawCurrentPath(targetCtx = canvasCtx) {กระจาย
+        function drawCurrentPath(targetCtx = canvasCtx) {
             if (drawingPoints.length > 1) {
                 targetCtx.beginPath();
                 targetCtx.strokeStyle = '#ff7675';
@@ -328,7 +328,7 @@
             }
         }
 
-        // ระบบตรวจสอบความถูกต้อง: ตรวจสอบความกว้างส่วนบนและส่วนล่างอย่างละเอียด ป้องกันการลากเส้นตรงแบบสระเอ
+        // ระบบตรวจสอบความถูกต้อง: ป้องกันสระเอ ป้องกันการได้ดาวง่ายเกินไป
         function checkDrawingEvaluation() {
             if (drawingPoints.length > 60 && gameState === 'DRAWING') {
                 let minX = Math.min(...drawingPoints.map(p => p.x));
@@ -340,7 +340,6 @@
                 let height = maxY - minY;
                 let totalPoints = drawingPoints.length;
 
-                // ตรวจสอบความกว้างแยกครึ่งบนและครึ่งล่าง เพื่อดูว่าเป็นวงหัวสระ ใ- จริงหรือไม่
                 let midY = minY + (height / 2);
                 let upperPoints = drawingPoints.filter(p => p.y <= midY);
                 let upperMinX = upperPoints.length > 0 ? Math.min(...upperPoints.map(p => p.x)) : minX;
@@ -348,16 +347,13 @@
                 let upperWidth = upperMaxX - upperMinX;
 
                 let score = 0;
-
-                // เงื่อนไขจับสระเอ: ถ้าครึ่งบนแคบมากๆ (เป็นเส้นตรงดิ่งลงมา) ต่อให้ข้างล่างตวัดก็ถือว่าเป็นสระเอ
                 let isSaraA = (upperWidth < 35 || width < 42); 
 
                 if (isSaraA) {
-                    score = 2; // ถ้าเป็นรูปทรงสระเอ ให้แค่ 2 ดาวและไม่ยอมให้ผ่านเข้ารอบถ่ายรูป
+                    score = 2; 
                 } else {
-                    // ถ้าโครงสร้างส่วนหัวมีความกว้างและสัดส่วนถูกต้องตามแบบสระ ใ-
                     if (upperWidth >= 45 && width >= 55 && height >= 75 && totalPoints >= 90) {
-                        score = 5; // ได้ 5 ดาวเต็ม
+                        score = 5; 
                     } else if (upperWidth >= 38 && width >= 45) {
                         score = 4; 
                     } else {
@@ -365,7 +361,6 @@
                     }
                 }
 
-                // ต้องได้ 4 หรือ 5 ดาว (เขียนสระ ใ- ถูกต้องเท่านั้น) ถึงจะปลดล็อกหน้าถ่ายรูป
                 if (score >= 4) {
                     triggerSuccessSequence(score);
                 }
@@ -480,22 +475,33 @@
 
         hands.onResults(onResults);
 
-        const camera = new Camera(videoElement, {
-            onFrame: async () => {
-                await hands.send({ image: videoElement });
-            },
-            width: 640,
-            height: 480
-        });
-
-        camera.start()
-            .then(() => {
-                statusText.innerText = "กรุณาชูนิ้วโป้ง (กดไลก์ 👍) หน้ากล้องเพื่อปลดล็อกการเขียน";
-            })
-            .catch((err) => {
-                statusText.innerText = "ไม่สามารถเปิดกล้องได้ กรุณาอนุญาตการใช้งานกล้อง";
+        // ระบบเปิดกล้องมาตรฐานใหม่ ป้องกันอาการค้าง
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: 640, height: 480, facingMode: 'user' }
+                });
+                videoElement.srcObject = stream;
+                
+                videoElement.onloadedmetadata = () => {
+                    videoElement.play();
+                    statusText.innerText = "กรุณาชูนิ้วโป้ง (กดไลก์ 👍) หน้ากล้องเพื่อปลดล็อกการเขียน";
+                    
+                    async function sendVideoFrame() {
+                        if (!videoElement.paused && !videoElement.ended) {
+                            await hands.send({ image: videoElement });
+                        }
+                        requestAnimationFrame(sendVideoFrame);
+                    }
+                    sendVideoFrame();
+                };
+            } catch (err) {
+                statusText.innerText = "ไม่สามารถเปิดกล้องได้ กรุณาตรวจสอบการอนุญาตสิทธิ์กล้อง";
                 console.error(err);
-            });
+            }
+        }
+
+        startCamera();
     </script>
 </body>
 </html>
