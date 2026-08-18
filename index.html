@@ -77,7 +77,7 @@
             margin-top: 15px;
             font-size: 18px;
             font-weight: bold;
-            color: #0984e3;
+            color: #d63031;
             background: white;
             padding: 10px 20px;
             border-radius: 30px;
@@ -144,18 +144,18 @@
 <body>
 
     <h1>✏️ ฝึกเขียนสระ ใ- บนอากาศ</h1>
-    <p>ยกนิ้วชี้ วนหัวม้วน (ด้านขวา) แล้วลากลงมาโค้งฐานด้านซ้ายตามแบบ</p>
+    <p>ขั้นตอนที่ 1: ทำท่า <b>"กดไลก์ 👍"</b> เพื่อเริ่ม | ขั้นตอนที่ 2: ยกนิ้วชี้เขียนตามแบบ</p>
 
     <div class="app-container">
         <video id="webcam" autoplay playsinline width="640" height="480"></video>
         <canvas id="output_canvas" width="640" height="480"></canvas>
         <div class="ui-overlay">
-            <div class="badge" id="stepBadge">เป้าหมาย: เขียนสระ ใ-</div>
-            <div class="badge" id="timerBadge" style="display: none;">ถ่ายรูปใน: 10</div>
+            <div class="badge" id="stepBadge">สถานะ: รอท่ากดไลก์ 👍</div>
+            <div class="badge" id="timerBadge" style="display: none;">ถ่ายรูปใน: 5</div>
         </div>
     </div>
 
-    <div class="status-box" id="statusText">กำลังเตรียมกล้อง...</div>
+    <div class="status-box" id="statusText">กรุณาชูนิ้วโป้ง (กดไลก์ 👍) หน้ากล้องเพื่อปลดล็อกการเขียน</div>
 
     <div class="modal" id="resultModal">
         <div class="modal-content">
@@ -172,6 +172,9 @@
         </div>
     </div>
 
+    <!-- โหลดรูปสระ ใ- ที่ลบพื้นหลังซ่อนไว้เพื่อใช้นำมาวาดทับลงบนจอ -->
+    <img id="guideImage" src="sara_ai.png" style="display:none;" crossorigin="anonymous">
+
     <script>
         const videoElement = document.getElementById('webcam');
         const canvasElement = document.getElementById('output_canvas');
@@ -183,10 +186,11 @@
         const resultImage = document.getElementById('resultImage');
         const downloadBtn = document.getElementById('downloadBtn');
         const modalStars = document.getElementById('modalStars');
+        const guideImg = document.getElementById('guideImage');
 
         let drawingPoints = [];
-        let gameState = 'DRAWING';
-        let countdownTimer = 10;
+        let gameState = 'WAITING_FOR_LIKE'; // WAITING_FOR_LIKE, DRAWING, SUCCESS, COUNTDOWN, DONE
+        let countdownTimer = 5;
         let countdownInterval = null;
         let earnedStars = 5;
 
@@ -221,36 +225,35 @@
             }
         }
 
-        // วาดเส้นไกด์ตัวอย่างสระ ใ- ให้ถูกต้องตามรูปต้นฉบับ (หัวอยู่ขวา หางยาวลงมาและฐานโค้งไปทางซ้าย)
-        function drawGuideTemplate(ctx) {
-            ctx.save();
-            let cx = canvasElement.width / 2;
-            let cy = canvasElement.height / 2 - 20;
+        // เช็คว่าทำท่ากดไลก์อยู่หรือไม่ (นิ้วโป้งชี้ขึ้น Y น้อยกว่าข้อนิ้วอื่นๆ และนิ้วอื่นพับกำปั้น)
+        function isThumbsUp(landmarks) {
+            const thumbTip = landmarks[4];
+            const thumbIp = landmarks[3];
+            const indexTip = landmarks[8];
+            const indexMcp = landmarks[5];
+            const middleTip = landmarks[12];
+            const middleMcp = landmarks[9];
 
-            // กรอบการ์ดฟ้าอ่อน
-            ctx.strokeStyle = 'rgba(9, 132, 227, 0.4)';
-            ctx.lineWidth = 6;
-            ctx.strokeRect(cx - 70, cy - 120, 140, 240);
+            // เช็คว่านิ้วโป้งอยู่สูงกว่า (ค่า Y น้อยกว่า) และนิ้วอื่นๆ กำอยู่
+            const isThumbUp = thumbTip.y < thumbIp.y && thumbTip.y < indexMcp.y;
+            const areOtherFingersClosed = indexTip.y > indexMcp.y && middleTip.y > middleMcp.y;
 
-            ctx.strokeStyle = 'rgba(9, 132, 227, 0.3)';
-            ctx.fillStyle = 'rgba(9, 132, 227, 0.15)';
-            ctx.lineWidth = 18;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
+            return isThumbUp && areOtherFingersClosed;
+        }
 
-            // หัวม้วน (อยู่ด้านขวา ตามรูปต้นฉบับ)
-            ctx.beginPath();
-            ctx.arc(cx + 15, cy - 40, 25, 0, Math.PI * 2);
-            ctx.stroke();
+        // เช็คว่าชูแต่นิ้วชี้อย่างเดียวหรือไม่
+        function isIndexPointOnly(landmarks) {
+            const indexTip = landmarks[8];
+            const indexMcp = landmarks[5];
+            const middleTip = landmarks[12];
+            const middleMcp = landmarks[9];
+            const ringTip = landmarks[16];
+            const ringMcp = landmarks[13];
 
-            // ลำตัวและฐานโค้งด้านซ้าย
-            ctx.beginPath();
-            ctx.moveTo(cx - 10, cy - 40);
-            ctx.lineTo(cx - 10, cy + 60);
-            ctx.arc(cx + 5, cy + 60, 15, Math.PI, Math.PI * 2, false);
-            ctx.stroke();
+            const isIndexExtended = indexTip.y < indexMcp.y;
+            const areOthersFolded = middleTip.y > middleMcp.y && ringTip.y > ringMcp.y;
 
-            ctx.restore();
+            return isIndexExtended && areOthersFolded;
         }
 
         function onResults(results) {
@@ -258,27 +261,55 @@
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
             canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
-            if (gameState === 'DRAWING') {
-                drawGuideTemplate(canvasCtx);
+            // วาดรูปต้นฉบับสระ ใ- ที่ลบพื้นหลังแล้วลงบนจอ
+            if (guideImg.complete && guideImg.naturalWidth !== 0) {
+                let imgW = 160;
+                let imgH = 220;
+                let imgX = (canvasElement.width - imgW) / 2;
+                let imgY = (canvasElement.height - imgH) / 2 - 20;
+                
+                canvasCtx.save();
+                canvasCtx.globalAlpha = 0.45; // ความโปร่งใสของรูปต้นฉบับ
+                canvasCtx.drawImage(guideImg, imgX, imgY, imgW, imgH);
+                canvasCtx.restore();
             }
 
-            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0 && gameState === 'DRAWING') {
-                statusText.innerText = "กำลังเขียน... วนหัวขวาแล้วลากลงมาให้ถูกต้อง!";
-                statusText.style.color = "#e17055";
-
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
                 const landmarks = results.multiHandLandmarks[0];
-                const indexFingerTip = landmarks[8];
-                
-                const x = indexFingerTip.x * canvasElement.width;
-                const y = indexFingerTip.y * canvasElement.height;
 
-                drawingPoints.push({ x, y });
-                if (drawingPoints.length > 300) drawingPoints.shift();
+                if (gameState === 'WAITING_FOR_LIKE') {
+                    if (isThumbsUp(landmarks)) {
+                        playSound('pop');
+                        gameState = 'DRAWING';
+                        stepBadge.innerText = "สถานะ: เริ่มเขียนได้!";
+                        statusText.innerText = "ยอดเยี่ยม! ตอนนี้ยกนิ้วชี้ขึ้นมาเขียนตามสระ ใ- ได้เลยครับ";
+                        statusText.style.color = "#00b894";
+                    } else {
+                        statusText.innerText = "กรุณาชูนิ้วโป้ง (กดไลก์ 👍) ค้างไว้เพื่อเริ่ม";
+                        statusText.style.color = "#d63031";
+                    }
+                } else if (gameState === 'DRAWING') {
+                    if (isIndexPointOnly(landmarks)) {
+                        statusText.innerText = "กำลังเขียน... ลากเส้นตามรูปสระ ใ- ให้ครบถ้วน!";
+                        statusText.style.color = "#e17055";
 
-                checkDrawingAccuracy();
-            } else if (gameState === 'DRAWING') {
-                statusText.innerText = "ยกนิ้วชี้ขึ้นมาหน้ากล้องเพื่อเริ่มเขียน";
-                statusText.style.color = "#0984e3";
+                        const indexFingerTip = landmarks[8];
+                        const x = indexFingerTip.x * canvasElement.width;
+                        const y = indexFingerTip.y * canvasElement.height;
+
+                        drawingPoints.push({ x, y });
+                        if (drawingPoints.length > 350) drawingPoints.shift();
+
+                        checkDrawingAccuracy();
+                    } else {
+                        statusText.innerText = "กรุณายกเฉพาะ 'นิ้วชี้' เพื่อลากเส้นเขียน";
+                        statusText.style.color = "#0984e3";
+                    }
+                }
+            } else {
+                if (gameState === 'WAITING_FOR_LIKE') {
+                    statusText.innerText = "ไม่พบมือ กรุณาชูนิ้วโป้ง (กดไลก์ 👍) หน้ากล้อง";
+                }
             }
 
             drawCurrentPath();
@@ -302,7 +333,7 @@
         }
 
         function checkDrawingAccuracy() {
-            if (drawingPoints.length > 120 && gameState === 'DRAWING') {
+            if (drawingPoints.length > 100 && gameState === 'DRAWING') {
                 let minX = Math.min(...drawingPoints.map(p => p.x));
                 let maxX = Math.max(...drawingPoints.map(p => p.x));
                 let minY = Math.min(...drawingPoints.map(p => p.y));
@@ -311,10 +342,10 @@
                 let width = maxX - minX;
                 let height = maxY - minY;
 
-                if (width > 50 && height > 80) {
+                if (width > 40 && height > 70) {
                     let score = 5;
-                    if (width < 70 || height < 100) score = 4;
-                    if (drawingPoints.length < 150) score = 3;
+                    if (width < 60 || height < 90) score = 4;
+                    if (drawingPoints.length < 130) score = 3;
                     
                     triggerSuccessSequence(score);
                 }
@@ -328,12 +359,12 @@
 
             stepBadge.innerText = `⭐ ได้ ${score} ดาว!`;
             timerBadge.style.display = "block";
-            statusText.innerText = "เก่งมาก! ยิ้มสวยๆ เตรียมถ่ายรูป (10 วินาที)...";
+            statusText.innerText = "เก่งมาก! ยิ้มสวยๆ เตรียมถ่ายรูป (5 วินาที)...";
             statusText.style.color = "#00b894";
 
             setTimeout(() => {
                 gameState = 'COUNTDOWN';
-                countdownTimer = 10;
+                countdownTimer = 5; // ลดเหลือ 5 วินาทีตามต้องการ
                 timerBadge.innerText = `ถ่ายรูปใน: ${countdownTimer}`;
 
                 countdownInterval = setInterval(() => {
@@ -358,13 +389,11 @@
             photoCanvas.height = videoElement.videoHeight || 480;
             const pCtx = photoCanvas.getContext('2d');
 
-            // วาดภาพจากกล้องให้ถูกต้องไม่กลับด้าน
             pCtx.save();
             pCtx.scale(-1, 1);
             pCtx.drawImage(videoElement, -photoCanvas.width, 0, photoCanvas.width, photoCanvas.height);
             pCtx.restore();
 
-            // วาดเส้นลายมือทับลงไป
             pCtx.save();
             if (drawingPoints.length > 1) {
                 pCtx.beginPath();
@@ -408,9 +437,9 @@
         function resetActivity() {
             resultModal.style.display = 'none';
             drawingPoints = [];
-            gameState = 'DRAWING';
-            stepBadge.innerText = "เป้าหมาย: เขียนสระ ใ-";
-            statusText.innerText = "พร้อมแล้ว! ยกนิ้วชี้ขึ้นมาเขียนบนอากาศได้เลย";
+            gameState = 'WAITING_FOR_LIKE';
+            stepBadge.innerText = "สถานะ: รอท่ากดไลก์ 👍";
+            statusText.innerText = "กรุณาชูนิ้วโป้ง (กดไลก์ 👍) หน้ากล้องเพื่อเริ่มใหม่อีกครั้ง";
         }
 
         const hands = new Hands({
@@ -436,15 +465,12 @@
 
         camera.start()
             .then(() => {
-                statusText.innerText = "พร้อมแล้ว! ยกนิ้วชี้ขึ้นมาเขียนบนอากาศได้เลย";
+                statusText.innerText = "กรุณาชูนิ้วโป้ง (กดไลก์ 👍) หน้ากล้องเพื่อปลดล็อกการเขียน";
             })
             .catch((err) => {
                 statusText.innerText = "ไม่สามารถเปิดกล้องได้ กรุณาอนุญาตการใช้งานกล้อง";
                 console.error(err);
             });
     </script>
-</body>
-</html>
-
 </body>
 </html>
