@@ -144,7 +144,7 @@
 <body>
 
     <h1>✏️ ฝึกเขียนสระ ใ- บนอากาศ</h1>
-    <p>ยกนิ้วชี้ วนหัวม้วนเข้าด้านใน แล้วลากลงมาให้ถูกต้องตามแบบ</p>
+    <p>ยกนิ้วชี้ วนหัวม้วน (ด้านขวา) แล้วลากลงมาโค้งฐานด้านซ้ายตามแบบ</p>
 
     <div class="app-container">
         <video id="webcam" autoplay playsinline width="640" height="480"></video>
@@ -221,7 +221,7 @@
             }
         }
 
-        // วาดเส้นไกด์ตัวอย่างสระ ใ- แบบถูกต้องตามแบบล่าสุด (หัวอยู่ด้านซ้าย วนขมวด และหางยาวลงมามีฐานโค้งขวา)
+        // วาดเส้นไกด์ตัวอย่างสระ ใ- ให้ถูกต้องตามรูปต้นฉบับ (หัวอยู่ขวา หางยาวลงมาและฐานโค้งไปทางซ้าย)
         function drawGuideTemplate(ctx) {
             ctx.save();
             let cx = canvasElement.width / 2;
@@ -238,16 +238,16 @@
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
 
-            // หัวม้วน (อยู่ด้านซ้ายของตัวสระ)
+            // หัวม้วน (อยู่ด้านขวา ตามรูปต้นฉบับ)
             ctx.beginPath();
-            ctx.arc(cx - 15, cy - 40, 25, 0, Math.PI * 2);
+            ctx.arc(cx + 15, cy - 40, 25, 0, Math.PI * 2);
             ctx.stroke();
 
-            // ลำตัวและฐานโค้งด้านขวา
+            // ลำตัวและฐานโค้งด้านซ้าย
             ctx.beginPath();
-            ctx.moveTo(cx + 10, cy - 40);
-            ctx.lineTo(cx + 10, cy + 60);
-            ctx.arc(cx - 5, cy + 60, 15, 0, Math.PI, false);
+            ctx.moveTo(cx - 10, cy - 40);
+            ctx.lineTo(cx - 10, cy + 60);
+            ctx.arc(cx + 5, cy + 60, 15, Math.PI, Math.PI * 2, false);
             ctx.stroke();
 
             ctx.restore();
@@ -263,7 +263,7 @@
             }
 
             if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0 && gameState === 'DRAWING') {
-                statusText.innerText = "กำลังเขียน... วนหัวแล้วลากลงมาให้ครบวงจร!";
+                statusText.innerText = "กำลังเขียน... วนหัวขวาแล้วลากลงมาให้ถูกต้อง!";
                 statusText.style.color = "#e17055";
 
                 const landmarks = results.multiHandLandmarks[0];
@@ -358,13 +358,13 @@
             photoCanvas.height = videoElement.videoHeight || 480;
             const pCtx = photoCanvas.getContext('2d');
 
-            // วาดภาพจากกล้องให้ถูกต้องไม่ตีลังกา
+            // วาดภาพจากกล้องให้ถูกต้องไม่กลับด้าน
             pCtx.save();
             pCtx.scale(-1, 1);
             pCtx.drawImage(videoElement, -photoCanvas.width, 0, photoCanvas.width, photoCanvas.height);
             pCtx.restore();
 
-            // วาดเส้นลายมือทับลงไปในทิศทางที่ถูกต้อง
+            // วาดเส้นลายมือทับลงไป
             pCtx.save();
             if (drawingPoints.length > 1) {
                 pCtx.beginPath();
@@ -443,5 +443,8 @@
                 console.error(err);
             });
     </script>
+</body>
+</html>
+
 </body>
 </html>
