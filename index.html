@@ -312,7 +312,7 @@
             canvasCtx.restore();
         }
 
-        function drawCurrentPath(targetCtx = canvasCtx) {
+        function drawCurrentPath(targetCtx = canvasCtx) {กระจาย
             if (drawingPoints.length > 1) {
                 targetCtx.beginPath();
                 targetCtx.strokeStyle = '#ff7675';
@@ -328,7 +328,7 @@
             }
         }
 
-        // ระบบตรวจสอบความถูกต้อง: ป้องกันสระเอ (เส้นตรงผอมๆ) และให้ 5 ดาวง่ายขึ้นสำหรับคนที่เขียนสระ ใ- ถูกต้อง
+        // ระบบตรวจสอบความถูกต้อง: ตรวจสอบความกว้างส่วนบนและส่วนล่างอย่างละเอียด ป้องกันการลากเส้นตรงแบบสระเอ
         function checkDrawingEvaluation() {
             if (drawingPoints.length > 60 && gameState === 'DRAWING') {
                 let minX = Math.min(...drawingPoints.map(p => p.x));
@@ -340,25 +340,32 @@
                 let height = maxY - minY;
                 let totalPoints = drawingPoints.length;
 
+                // ตรวจสอบความกว้างแยกครึ่งบนและครึ่งล่าง เพื่อดูว่าเป็นวงหัวสระ ใ- จริงหรือไม่
+                let midY = minY + (height / 2);
+                let upperPoints = drawingPoints.filter(p => p.y <= midY);
+                let upperMinX = upperPoints.length > 0 ? Math.min(...upperPoints.map(p => p.x)) : minX;
+                let upperMaxX = upperPoints.length > 0 ? Math.max(...upperPoints.map(p => p.x)) : maxX;
+                let upperWidth = upperMaxX - upperMinX;
+
                 let score = 0;
 
-                // เช็คว่าถ้าผอมเกินไป (เหมือนสระเอที่เป็นเส้นตรงดิ่ง) ตัดสิทธิ์ทันที
-                let isTooStraight = (width < 32); 
+                // เงื่อนไขจับสระเอ: ถ้าครึ่งบนแคบมากๆ (เป็นเส้นตรงดิ่งลงมา) ต่อให้ข้างล่างตวัดก็ถือว่าเป็นสระเอ
+                let isSaraA = (upperWidth < 35 || width < 42); 
 
-                if (isTooStraight) {
-                    score = 2; // เขียนเป็นเส้นตรงเหมือนสระเอ ได้แค่ 2 ดาวและไม่ผ่านเข้ารอบถ่ายรูป
+                if (isSaraA) {
+                    score = 2; // ถ้าเป็นรูปทรงสระเอ ให้แค่ 2 ดาวและไม่ยอมให้ผ่านเข้ารอบถ่ายรูป
                 } else {
-                    // หากมีความกว้างโค้งออกด้านข้างและมีความสูงที่เหมาะสม ให้ 4 หรือ 5 ดาวทันที
-                    if (width > 45 && height > 70 && totalPoints > 90) {
-                        score = 5; // เขียนสระ ใ- ได้สวยและถูกต้องตามสัดส่วน ได้ 5 ดาวเต็ม!
-                    } else if (width > 35 && height > 55) {
-                        score = 4; // เขียนได้ดี
+                    // ถ้าโครงสร้างส่วนหัวมีความกว้างและสัดส่วนถูกต้องตามแบบสระ ใ-
+                    if (upperWidth >= 45 && width >= 55 && height >= 75 && totalPoints >= 90) {
+                        score = 5; // ได้ 5 ดาวเต็ม
+                    } else if (upperWidth >= 38 && width >= 45) {
+                        score = 4; 
                     } else {
                         score = 3; 
                     }
                 }
 
-                // หากผ่านเกณฑ์ (ตั้งแต่ 4-5 ดาวขึ้นไป) ถึงจะยอมให้เข้าสู่หน้าถ่ายรูปผลงาน
+                // ต้องได้ 4 หรือ 5 ดาว (เขียนสระ ใ- ถูกต้องเท่านั้น) ถึงจะปลดล็อกหน้าถ่ายรูป
                 if (score >= 4) {
                     triggerSuccessSequence(score);
                 }
