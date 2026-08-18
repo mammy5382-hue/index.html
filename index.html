@@ -1,4 +1,4 @@
-<<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
@@ -107,6 +107,7 @@
             border-radius: 12px;
             border: 4px solid #ff7675;
             margin-bottom: 10px;
+            max-height: 40vh;
         }
         .stars-display {
             font-size: 28px;
@@ -118,8 +119,8 @@
             background: #00b894;
             color: white;
             border: none;
-            padding: 12px 25px;
-            font-size: 16px;
+            padding: 10px 20px;
+            font-size: 15px;
             font-weight: bold;
             border-radius: 30px;
             cursor: pointer;
@@ -128,6 +129,10 @@
             margin: 5px;
             text-decoration: none;
             display: inline-block;
+        }
+        .btn-drive {
+            background: #0984e3;
+            box-shadow: 0 4px 10px rgba(9,132,227,0.4);
         }
         .btn-retry {
             background: #dfe6e9;
@@ -138,15 +143,15 @@
 </head>
 <body>
 
-    <h1>✏️ ฝึกเขียนสระ ใ- ตามรอยเส้นประ</h1>
-    <p>ยกนิ้วชี้ วนหัวม้วนเข้าด้านใน แล้วลากลงมาเติมขีดข้างๆ ให้ถูกต้องตามแบบ</p>
+    <h1>✏️ ฝึกเขียนสระ ใ- บนอากาศ</h1>
+    <p>ยกนิ้วชี้ วนหัวม้วนเข้าด้านใน แล้วลากลงมาให้ถูกต้องตามแบบ</p>
 
     <div class="app-container">
         <video id="webcam" autoplay playsinline width="640" height="480"></video>
         <canvas id="output_canvas" width="640" height="480"></canvas>
         <div class="ui-overlay">
             <div class="badge" id="stepBadge">เป้าหมาย: เขียนสระ ใ-</div>
-            <div class="badge" id="timerBadge" style="display: none;">ถ่ายรูปใน: 3</div>
+            <div class="badge" id="timerBadge" style="display: none;">ถ่ายรูปใน: 10</div>
         </div>
     </div>
 
@@ -160,6 +165,7 @@
             <img id="resultImage" alt="รูปถ่ายผลงาน">
             <div>
                 <a id="downloadBtn" class="btn" download="สระใอไม้ม้วนของฉัน.png">📥 บันทึกรูปภาพ</a>
+                <a href="https://drive.google.com/drive/folders/1ztOpclQ9YkFk9rWhL3kJoiIQGOfwOids" target="_blank" class="btn btn-drive">📂 ส่งเข้า Google Drive</a>
                 <button class="btn btn-retry" onclick="resetActivity()">🔄 ลองใหม่อีกครั้ง</button>
             </div>
         </div>
@@ -179,7 +185,7 @@
 
         let drawingPoints = [];
         let gameState = 'DRAWING';
-        let countdownTimer = 3;
+        let countdownTimer = 10;
         let countdownInterval = null;
         let earnedStars = 5;
 
@@ -214,43 +220,35 @@
             }
         }
 
-        // วาดเส้นไกด์ตัวอย่างสระ ใ- แบบในหนังสือเรียน (สีเทาประจางๆ พร้อมหัวม้วนและขีดขนาบ)
+        // วาดเส้นไกด์ตัวอย่างสระ ใ- แบบหนาโค้งมนตามภาพตัวอย่างใหม่
         function drawGuideTemplate(ctx) {
             ctx.save();
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-            ctx.lineWidth = 6;
-            ctx.setLineDash([8, 8]);
-
-            // ตำแหน่งกึ่งกลางจอขวาเล็กน้อยสำหรับเป็นเป้าหมายให้เด็กๆ วาดทับ
-            let cx = canvasElement.width / 2 + 30;
+            let cx = canvasElement.width / 2 + 20;
             let cy = canvasElement.height / 2 - 20;
 
-            // 1. วาดหัววนสระใอ (วงกลมก้นหอยจำลอง)
+            // วาดกรอบไกด์ฟ้าอ่อน
+            ctx.strokeStyle = 'rgba(9, 132, 227, 0.4)';
+            ctx.lineWidth = 6;
+            ctx.strokeRect(cx - 70, cy - 120, 140, 240);
+
+            // วาดตัวสระ ใ- ทึบแสงจางๆ เป็นต้นแบบ
+            ctx.strokeStyle = 'rgba(9, 132, 227, 0.3)';
+            ctx.fillStyle = 'rgba(9, 132, 227, 0.15)';
+            ctx.lineWidth = 18;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            // หัวม้วน
             ctx.beginPath();
-            ctx.arc(cx, cy - 30, 25, 0, Math.PI * 2);
+            ctx.arc(cx - 10, cy - 40, 30, 0, Math.PI * 2);
             ctx.stroke();
 
-            // ลากตัวสระลงมาด้านล่าง
-            ctx.setLineDash([]);
+            // ลำตัวยาวลงมาด้านล่างและฐานโค้ง
             ctx.beginPath();
-            ctx.moveTo(cx + 25, cy - 30);
-            ctx.lineTo(cx + 25, cy + 50);
-            ctx.arc(cx + 10, cy + 50, 15, 0, Math.PI, false);
+            ctx.moveTo(cx + 20, cy - 40);
+            ctx.lineTo(cx + 20, cy + 60);
+            ctx.arc(cx, cy + 60, 20, 0, Math.PI, false);
             ctx.stroke();
-
-            // 2. ขีดขนาบด้านข้าง ( - )
-            ctx.setLineDash([6, 6]);
-            ctx.beginPath();
-            ctx.moveTo(cx + 60, cy + 10);
-            ctx.lineTo(cx + 110, cy + 10);
-            ctx.stroke();
-
-            // ข้อความตัวอย่างกำกับ
-            ctx.font = 'bold 20px "Sarabun", sans-serif';
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-            ctx.textAlign = 'center';
-            ctx.fillText("เขียนตามรอยเส้นประ", cx, cy - 100);
 
             ctx.restore();
         }
@@ -260,7 +258,6 @@
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
             canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
-            // แสดงเส้นไกด์ต้นแบบเฉพาะตอนกำลังวาด
             if (gameState === 'DRAWING') {
                 drawGuideTemplate(canvasCtx);
             }
@@ -276,7 +273,7 @@
                 const y = indexFingerTip.y * canvasElement.height;
 
                 drawingPoints.push({ x, y });
-                if (drawingPoints.length > 200) drawingPoints.shift();
+                if (drawingPoints.length > 250) drawingPoints.shift();
 
                 checkDrawingAccuracy();
             } else if (gameState === 'DRAWING') {
@@ -292,7 +289,7 @@
             if (drawingPoints.length > 1) {
                 targetCtx.beginPath();
                 targetCtx.strokeStyle = '#ff7675';
-                targetCtx.lineWidth = 10;
+                targetCtx.lineWidth = 12;
                 targetCtx.lineCap = 'round';
                 targetCtx.lineJoin = 'round';
 
@@ -314,11 +311,10 @@
                 let width = maxX - minX;
                 let height = maxY - minY;
 
-                // ตรวจสอบความถูกต้อง: ต้องมีการลากเส้นเป็นสัดส่วนความสูงและความกว้างที่เหมาะสมคล้ายตัวสระ ใ-
-                if (width > 50 && height > 60) {
+                if (width > 45 && height > 55) {
                     let score = 5;
-                    if (width < 70 || height < 80) score = 4;
-                    if (drawingPoints.length < 80) score = 3;
+                    if (width < 65 || height < 75) score = 4;
+                    if (drawingPoints.length < 75) score = 3;
                     
                     triggerSuccessSequence(score);
                 }
@@ -332,12 +328,12 @@
 
             stepBadge.innerText = `⭐ ได้ ${score} ดาว!`;
             timerBadge.style.display = "block";
-            statusText.innerText = "เก่งมาก! ยิ้มสวยๆ เตรียมถ่ายรูปผลงาน...";
+            statusText.innerText = "เก่งมาก! ยิ้มสวยๆ เตรียมถ่ายรูป (10 วินาที)...";
             statusText.style.color = "#00b894";
 
             setTimeout(() => {
                 gameState = 'COUNTDOWN';
-                countdownTimer = 3;
+                countdownTimer = 10; // ตั้งเวลานับถอยหลังเป็น 10 วินาที
                 timerBadge.innerText = `ถ่ายรูปใน: ${countdownTimer}`;
 
                 countdownInterval = setInterval(() => {
@@ -367,25 +363,23 @@
             pCtx.drawImage(videoElement, -photoCanvas.width, 0, photoCanvas.width, photoCanvas.height);
             pCtx.restore();
 
-            // บันทติกรอยเส้นที่เขียนลงไปในรูปถ่ายด้วย
+            // บันทึกรอยเส้นที่เขียนลงไปในรูปถ่ายด้วย
             pCtx.save();
             drawCurrentPath(pCtx);
             pCtx.restore();
 
-            // ตกแต่งกรอบและป้ายข้อความ
             pCtx.lineWidth = 15;
             pCtx.strokeStyle = '#ff7675';
             pCtx.strokeRect(0, 0, photoCanvas.width, photoCanvas.height);
 
             pCtx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-            pCtx.fillRect(20, 20, photoCanvas.width - 40, 65);
+            pCtx.fillRect(20, 20, photoCanvas.width - 40, 55);
 
-            pCtx.font = 'bold 24px "Sarabun", sans-serif';
+            pCtx.font = 'bold 22px "Sarabun", sans-serif';
             pCtx.fillStyle = '#d63031';
             pCtx.textAlign = 'center';
-            pCtx.fillText("⭐ ฝึกเขียนสระ ใ- : ใบ, ใส, ให้, ไปไหน ⭐", photoCanvas.width / 2, 60);
+            pCtx.fillText("⭐ ฝึกเขียนสระ ใ- แสนสนุก ⭐", photoCanvas.width / 2, 55);
 
-            // แสดงดาว 1-5 ดาวในกล่องผลลัพธ์
             let starStr = "";
             for(let i = 0; i < 5; i++) {
                 starStr += (i < earnedStars) ? "⭐" : "☆";
