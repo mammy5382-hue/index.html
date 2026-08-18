@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>กิจกรรมสนุก: วาดสระใอไม้ม้วนบนอากาศ</title>
+    <title>ฝึกเขียนสระ ใ- บนอากาศ</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     <style>
@@ -73,16 +73,6 @@
             font-size: 14px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
-        .target-guide {
-            position: absolute;
-            right: 30px;
-            top: 80px;
-            font-size: 80px;
-            font-weight: bold;
-            color: rgba(255, 255, 255, 0.4);
-            pointer-events: none;
-            text-shadow: 0 0 10px rgba(0,0,0,0.5);
-        }
         .status-box {
             margin-top: 15px;
             font-size: 18px;
@@ -116,7 +106,13 @@
             max-width: 100%;
             border-radius: 12px;
             border: 4px solid #ff7675;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
+        }
+        .stars-display {
+            font-size: 28px;
+            color: #f1c40f;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
         .btn {
             background: #00b894;
@@ -142,15 +138,14 @@
 </head>
 <body>
 
-    <h1>🌟 วาดสระใอไม้ม้วนบนอากาศ 🌟</h1>
-    <p>ยกนิ้วชี้ขึ้นมา วาดตามตัวอย่างเป้าหมายด้านขวา</p>
+    <h1>✏️ ฝึกเขียนสระ ใ- ตามรอยเส้นประ</h1>
+    <p>ยกนิ้วชี้ วนหัวม้วนเข้าด้านใน แล้วลากลงมาเติมขีดข้างๆ ให้ถูกต้องตามแบบ</p>
 
     <div class="app-container">
         <video id="webcam" autoplay playsinline width="640" height="480"></video>
         <canvas id="output_canvas" width="640" height="480"></canvas>
-        <div class="target-guide">ใ-</div>
         <div class="ui-overlay">
-            <div class="badge" id="stepBadge">เป้าหมาย: วาดสระใอ</div>
+            <div class="badge" id="stepBadge">เป้าหมาย: เขียนสระ ใ-</div>
             <div class="badge" id="timerBadge" style="display: none;">ถ่ายรูปใน: 3</div>
         </div>
     </div>
@@ -159,12 +154,13 @@
 
     <div class="modal" id="resultModal">
         <div class="modal-content">
-            <h2 style="color: #00b894; margin-top: 0;">🎉 เก่งมาก! วาดสำเร็จแล้ว</h2>
+            <h2 style="color: #00b894; margin-top: 0; margin-bottom: 5px;">🎉 ยอดเยี่ยมมาก!</h2>
+            <div class="stars-display" id="modalStars">⭐⭐⭐⭐⭐</div>
             <canvas id="photoCanvas" style="display:none;"></canvas>
             <img id="resultImage" alt="รูปถ่ายผลงาน">
             <div>
                 <a id="downloadBtn" class="btn" download="สระใอไม้ม้วนของฉัน.png">📥 บันทึกรูปภาพ</a>
-                <button class="btn btn-retry" onclick="resetActivity()">🔄 เล่นอีกครั้ง</button>
+                <button class="btn btn-retry" onclick="resetActivity()">🔄 ลองใหม่อีกครั้ง</button>
             </div>
         </div>
     </div>
@@ -179,12 +175,13 @@
         const resultModal = document.getElementById('resultModal');
         const resultImage = document.getElementById('resultImage');
         const downloadBtn = document.getElementById('downloadBtn');
+        const modalStars = document.getElementById('modalStars');
 
         let drawingPoints = [];
-        let stars = [];
         let gameState = 'DRAWING';
         let countdownTimer = 3;
         let countdownInterval = null;
+        let earnedStars = 5;
 
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         
@@ -217,22 +214,59 @@
             }
         }
 
+        // วาดเส้นไกด์ตัวอย่างสระ ใ- แบบในหนังสือเรียน (สีเทาประจางๆ พร้อมหัวม้วนและขีดขนาบ)
+        function drawGuideTemplate(ctx) {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.lineWidth = 6;
+            ctx.setLineDash([8, 8]);
+
+            // ตำแหน่งกึ่งกลางจอขวาเล็กน้อยสำหรับเป็นเป้าหมายให้เด็กๆ วาดทับ
+            let cx = canvasElement.width / 2 + 30;
+            let cy = canvasElement.height / 2 - 20;
+
+            // 1. วาดหัววนสระใอ (วงกลมก้นหอยจำลอง)
+            ctx.beginPath();
+            ctx.arc(cx, cy - 30, 25, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // ลากตัวสระลงมาด้านล่าง
+            ctx.setLineDash([]);
+            ctx.beginPath();
+            ctx.moveTo(cx + 25, cy - 30);
+            ctx.lineTo(cx + 25, cy + 50);
+            ctx.arc(cx + 10, cy + 50, 15, 0, Math.PI, false);
+            ctx.stroke();
+
+            // 2. ขีดขนาบด้านข้าง ( - )
+            ctx.setLineDash([6, 6]);
+            ctx.beginPath();
+            ctx.moveTo(cx + 60, cy + 10);
+            ctx.lineTo(cx + 110, cy + 10);
+            ctx.stroke();
+
+            // ข้อความตัวอย่างกำกับ
+            ctx.font = 'bold 20px "Sarabun", sans-serif';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.textAlign = 'center';
+            ctx.fillText("เขียนตามรอยเส้นประ", cx, cy - 100);
+
+            ctx.restore();
+        }
+
         function onResults(results) {
             canvasCtx.save();
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
             canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
-            if (gameState === 'SUCCESS' || gameState === 'COUNTDOWN' || gameState === 'DONE') {
-                drawStars();
-            }
-
-            if (gameState === 'DONE') {
-                canvasCtx.restore();
-                return;
+            // แสดงเส้นไกด์ต้นแบบเฉพาะตอนกำลังวาด
+            if (gameState === 'DRAWING') {
+                drawGuideTemplate(canvasCtx);
             }
 
             if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0 && gameState === 'DRAWING') {
-                statusText.innerText = "กำลังวาดเส้น... วนหัวแล้วลากขึ้นเลย!";
+                statusText.innerText = "กำลังเขียน... วนหัวแล้วลากลงมาให้ตรงรอย!";
                 statusText.style.color = "#e17055";
 
                 const landmarks = results.multiHandLandmarks[0];
@@ -242,50 +276,63 @@
                 const y = indexFingerTip.y * canvasElement.height;
 
                 drawingPoints.push({ x, y });
-                if (drawingPoints.length > 100) drawingPoints.shift();
+                if (drawingPoints.length > 200) drawingPoints.shift();
 
-                checkDrawingCompletion();
+                checkDrawingAccuracy();
             } else if (gameState === 'DRAWING') {
-                statusText.innerText = "ยกนิ้วชี้ขึ้นมาหน้ากล้องเพื่อเริ่มวาด";
+                statusText.innerText = "ยกนิ้วชี้ขึ้นมาหน้ากล้องเพื่อเริ่มเขียน";
                 statusText.style.color = "#0984e3";
             }
 
-            if (drawingPoints.length > 1) {
-                canvasCtx.beginPath();
-                canvasCtx.strokeStyle = '#ff7675';
-                canvasCtx.lineWidth = 12;
-                canvasCtx.lineCap = 'round';
-                canvasCtx.lineJoin = 'round';
-
-                for (let i = 0; i < drawingPoints.length; i++) {
-                    if (i === 0) canvasCtx.moveTo(drawingPoints[i].x, drawingPoints[i].y);
-                    else canvasCtx.lineTo(drawingPoints[i].x, drawingPoints[i].y);
-                }
-                canvasCtx.stroke();
-            }
-
+            drawCurrentPath();
             canvasCtx.restore();
         }
 
-        function checkDrawingCompletion() {
-            if (drawingPoints.length > 40 && gameState === 'DRAWING') {
-                let startY = drawingPoints[0].y;
-                let endY = drawingPoints[drawingPoints.length - 1].y;
+        function drawCurrentPath(targetCtx = canvasCtx) {
+            if (drawingPoints.length > 1) {
+                targetCtx.beginPath();
+                targetCtx.strokeStyle = '#ff7675';
+                targetCtx.lineWidth = 10;
+                targetCtx.lineCap = 'round';
+                targetCtx.lineJoin = 'round';
+
+                for (let i = 0; i < drawingPoints.length; i++) {
+                    if (i === 0) targetCtx.moveTo(drawingPoints[i].x, drawingPoints[i].y);
+                    else targetCtx.lineTo(drawingPoints[i].x, drawingPoints[i].y);
+                }
+                targetCtx.stroke();
+            }
+        }
+
+        function checkDrawingAccuracy() {
+            if (drawingPoints.length > 60 && gameState === 'DRAWING') {
+                let minX = Math.min(...drawingPoints.map(p => p.x));
+                let maxX = Math.max(...drawingPoints.map(p => p.x));
+                let minY = Math.min(...drawingPoints.map(p => p.y));
+                let maxY = Math.max(...drawingPoints.map(p => p.y));
                 
-                if (startY - endY > 50) { 
-                    triggerSuccessSequence();
+                let width = maxX - minX;
+                let height = maxY - minY;
+
+                // ตรวจสอบความถูกต้อง: ต้องมีการลากเส้นเป็นสัดส่วนความสูงและความกว้างที่เหมาะสมคล้ายตัวสระ ใ-
+                if (width > 50 && height > 60) {
+                    let score = 5;
+                    if (width < 70 || height < 80) score = 4;
+                    if (drawingPoints.length < 80) score = 3;
+                    
+                    triggerSuccessSequence(score);
                 }
             }
         }
 
-        function triggerSuccessSequence() {
+        function triggerSuccessSequence(score) {
             gameState = 'SUCCESS';
+            earnedStars = score;
             playSound('success');
-            createStars();
 
-            stepBadge.innerText = "⭐ สำเร็จแล้ว!";
+            stepBadge.innerText = `⭐ ได้ ${score} ดาว!`;
             timerBadge.style.display = "block";
-            statusText.innerText = "เก่งมาก! ทำท่าสวยๆ เตรียมถ่ายรูป...";
+            statusText.innerText = "เก่งมาก! ยิ้มสวยๆ เตรียมถ่ายรูปผลงาน...";
             statusText.style.color = "#00b894";
 
             setTimeout(() => {
@@ -307,42 +354,6 @@
             }, 1000);
         }
 
-        function createStars() {
-            stars = [];
-            for (let i = 0; i < 20; i++) {
-                stars.push({
-                    x: Math.random() * canvasElement.width,
-                    y: Math.random() * canvasElement.height,
-                    size: Math.random() * 20 + 10,
-                    angle: Math.random() * Math.PI * 2
-                });
-            }
-        }
-
-        function drawStars() {
-            stars.forEach(star => {
-                canvasCtx.save();
-                canvasCtx.translate(star.x, star.y);
-                canvasCtx.rotate(star.angle);
-                canvasCtx.beginPath();
-                canvasCtx.fillStyle = '#f1c40f';
-                let spikes = 5;
-                let outerRadius = star.size;
-                let innerRadius = star.size / 2;
-                for (let i = 0; i < spikes * 2; i++) {
-                    let r = (i % 2 === 0) ? outerRadius : innerRadius;
-                    let a = (i * Math.PI) / spikes;
-                    let x = Math.cos(a) * r;
-                    let y = Math.sin(a) * r;
-                    if (i === 0) canvasCtx.moveTo(x, y);
-                    else canvasCtx.lineTo(x, y);
-                }
-                canvasCtx.closePath();
-                canvasCtx.fill();
-                canvasCtx.restore();
-            });
-        }
-
         function captureSnapshot() {
             gameState = 'DONE';
             
@@ -356,17 +367,30 @@
             pCtx.drawImage(videoElement, -photoCanvas.width, 0, photoCanvas.width, photoCanvas.height);
             pCtx.restore();
 
-            pCtx.lineWidth = 20;
+            // บันทติกรอยเส้นที่เขียนลงไปในรูปถ่ายด้วย
+            pCtx.save();
+            drawCurrentPath(pCtx);
+            pCtx.restore();
+
+            // ตกแต่งกรอบและป้ายข้อความ
+            pCtx.lineWidth = 15;
             pCtx.strokeStyle = '#ff7675';
             pCtx.strokeRect(0, 0, photoCanvas.width, photoCanvas.height);
 
             pCtx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-            pCtx.fillRect(20, 20, photoCanvas.width - 40, 70);
+            pCtx.fillRect(20, 20, photoCanvas.width - 40, 65);
 
-            pCtx.font = 'bold 26px "Sarabun", sans-serif';
+            pCtx.font = 'bold 24px "Sarabun", sans-serif';
             pCtx.fillStyle = '#d63031';
             pCtx.textAlign = 'center';
-            pCtx.fillText("⭐ สระใอไม้ม้วน: ใบ, ใส, ให้, ไปไหน ⭐", photoCanvas.width / 2, 65);
+            pCtx.fillText("⭐ ฝึกเขียนสระ ใ- : ใบ, ใส, ให้, ไปไหน ⭐", photoCanvas.width / 2, 60);
+
+            // แสดงดาว 1-5 ดาวในกล่องผลลัพธ์
+            let starStr = "";
+            for(let i = 0; i < 5; i++) {
+                starStr += (i < earnedStars) ? "⭐" : "☆";
+            }
+            modalStars.innerText = starStr;
 
             const dataUrl = photoCanvas.toDataURL('image/png');
             resultImage.src = dataUrl;
@@ -377,10 +401,9 @@
         function resetActivity() {
             resultModal.style.display = 'none';
             drawingPoints = [];
-            stars = [];
             gameState = 'DRAWING';
-            stepBadge.innerText = "เป้าหมาย: วาดสระใอ";
-            statusText.innerText = "พร้อมแล้ว! ยกนิ้วชี้ขึ้นมาวาดบนอากาศได้เลย";
+            stepBadge.innerText = "เป้าหมาย: เขียนสระ ใ-";
+            statusText.innerText = "พร้อมแล้ว! ยกนิ้วชี้ขึ้นมาเขียนบนอากาศได้เลย";
         }
 
         const hands = new Hands({
@@ -406,7 +429,7 @@
 
         camera.start()
             .then(() => {
-                statusText.innerText = "พร้อมแล้ว! ยกนิ้วชี้ขึ้นมาวาดบนอากาศได้เลย";
+                statusText.innerText = "พร้อมแล้ว! ยกนิ้วชี้ขึ้นมาเขียนบนอากาศได้เลย";
             })
             .catch((err) => {
                 statusText.innerText = "ไม่สามารถเปิดกล้องได้ กรุณาอนุญาตการใช้งานกล้อง";
