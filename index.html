@@ -1,4 +1,4 @@
-<<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
@@ -192,7 +192,7 @@
         let gameState = 'WAITING_FOR_LIKE'; 
         let countdownTimer = 5;
         let countdownInterval = null;
-        let earnedStars = 3;
+        let earnedStars = 4;
 
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         
@@ -294,7 +294,7 @@
                         const y = indexFingerTip.y * canvasElement.height;
 
                         drawingPoints.push({ x, y });
-                        if (drawingPoints.length > 400) drawingPoints.shift();
+                        if (drawingPoints.length > 500) drawingPoints.shift();
 
                         checkDrawingEvaluation();
                     } else {
@@ -328,9 +328,9 @@
             }
         }
 
-        // ระบบประเมินคะแนนตามเกณฑ์ความสมบูรณ์ของการเขียน
+        // ปรับปรุงเกณฑ์การให้คะแนนใหม่ให้ยืดหยุ่นและให้ดาวสูงขึ้นตามจริง
         function checkDrawingEvaluation() {
-            if (drawingPoints.length > 140 && gameState === 'DRAWING') {
+            if (drawingPoints.length > 60 && gameState === 'DRAWING') {
                 let minX = Math.min(...drawingPoints.map(p => p.x));
                 let maxX = Math.max(...drawingPoints.map(p => p.x));
                 let minY = Math.min(...drawingPoints.map(p => p.y));
@@ -340,14 +340,11 @@
                 let height = maxY - minY;
                 let totalPoints = drawingPoints.length;
 
-                // คำนวณเกณฑ์คะแนนตามขนาดและความต่อเนื่องของเส้นที่วาด
-                let score = 3;
-                if (width > 50 && height > 90 && totalPoints > 220) {
-                    score = 5; // เขียนครบสมบูรณ์ ตัวใหญ่และยาวพอดี
-                } else if (width > 35 && height > 70 && totalPoints > 160) {
-                    score = 4; // เขียนได้ดีพอใช้
-                } else if (totalPoints < 150) {
-                    score = 2; // เขียนน้อยเกินไป หรือลากไม่ครบ
+                let score = 4; // ค่าเริ่มต้นให้ 4 ดาวไปเลย
+                if (width > 30 && height > 50 && totalPoints > 120) {
+                    score = 5; 
+                } else if (totalPoints > 80) {
+                    score = 4;
                 } else {
                     score = 3;
                 }
@@ -393,12 +390,12 @@
             photoCanvas.height = videoElement.videoHeight || 480;
             const pCtx = photoCanvas.getContext('2d');
 
-            // แก้ไขปัญหารูปกลับด้านในภาพถ่าย โดยไม่ฟลิบซ้ายขวาตอนบันทึก
+            // บันทึกภาพวิดีโอในทิศทางปกติ (ไม่กลับด้านซ้ายขวา)
             pCtx.save();
             pCtx.drawImage(videoElement, 0, 0, photoCanvas.width, photoCanvas.height);
             pCtx.restore();
 
-            // วาดเส้นลายมือลงบนภาพถ่ายในพิกัดที่ถูกต้องไม่สลับซ้ายขวา
+            // วาดเส้นลายมือลงบนภาพถ่ายในพิกัดที่ถูกต้อง
             pCtx.save();
             if (drawingPoints.length > 1) {
                 pCtx.beginPath();
@@ -408,7 +405,6 @@
                 pCtx.lineJoin = 'round';
 
                 for (let i = 0; i < drawingPoints.length; i++) {
-                    // ปรับพิกัด X ให้ตรงกับภาพจริงที่ไม่ฟลิบ
                     let fixedX = photoCanvas.width - drawingPoints[i].x;
                     if (i === 0) pCtx.moveTo(fixedX, drawingPoints[i].y);
                     else pCtx.lineTo(fixedX, drawingPoints[i].y);
@@ -417,22 +413,30 @@
             }
             pCtx.restore();
 
+            // กรอบรูปสวยงาม
             pCtx.lineWidth = 15;
             pCtx.strokeStyle = '#ff7675';
             pCtx.strokeRect(0, 0, photoCanvas.width, photoCanvas.height);
 
-            pCtx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-            pCtx.fillRect(20, 20, photoCanvas.width - 40, 50);
+            // แถบข้อความหัวกระดาษ
+            pCtx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+            pCtx.fillRect(20, 20, photoCanvas.width - 40, 65);
 
             pCtx.font = 'bold 22px "Sarabun", sans-serif';
             pCtx.fillStyle = '#d63031';
             pCtx.textAlign = 'center';
-            pCtx.fillText("⭐ ฝึกเขียนสระ ใ- แสนสนุก ⭐", photoCanvas.width / 2, 52);
+            pCtx.fillText("⭐ ฝึกเขียนสระ ใ- แสนสนุก ⭐", photoCanvas.width / 2, 50);
 
+            // แสดงจำนวนดาวบนภาพถ่ายที่บันทึก
             let starStr = "";
             for(let i = 0; i < 5; i++) {
                 starStr += (i < earnedStars) ? "⭐" : "☆";
             }
+            pCtx.font = 'bold 20px "Sarabun", sans-serif';
+            pCtx.fillStyle = '#f1c40f';
+            pCtx.fillText(starStr, photoCanvas.width / 2, 77);
+
+            // แสดงผลใน Modal หน้าจอ
             modalStars.innerText = starStr;
             modalTitle.innerText = earnedStars >= 4 ? "🎉 ยอดเยี่ยมมาก!" : "👍 พยายามได้ดีมาก!";
 
@@ -480,8 +484,5 @@
                 console.error(err);
             });
     </script>
-</body>
-</html>
-
 </body>
 </html>
