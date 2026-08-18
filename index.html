@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
@@ -159,7 +159,7 @@
 
     <div class="modal" id="resultModal">
         <div class="modal-content">
-            <h2 style="color: #00b894; margin-top: 0; margin-bottom: 5px;">🎉 ยอดเยี่ยมมาก!</h2>
+            <h2 style="color: #00b894; margin-top: 0; margin-bottom: 5px;" id="modalTitle">🎉 ยอดเยี่ยมมาก!</h2>
             <div class="stars-display" id="modalStars">⭐⭐⭐⭐⭐</div>
             <canvas id="photoCanvas" style="display:none;"></canvas>
             <img id="resultImage" alt="รูปถ่ายผลงาน">
@@ -172,7 +172,6 @@
         </div>
     </div>
 
-    <!-- โหลดรูปสระ ใ- ที่ลบพื้นหลังซ่อนไว้เพื่อใช้นำมาวาดทับลงบนจอ -->
     <img id="guideImage" src="sara_ai.png" style="display:none;" crossorigin="anonymous">
 
     <script>
@@ -186,13 +185,14 @@
         const resultImage = document.getElementById('resultImage');
         const downloadBtn = document.getElementById('downloadBtn');
         const modalStars = document.getElementById('modalStars');
+        const modalTitle = document.getElementById('modalTitle');
         const guideImg = document.getElementById('guideImage');
 
         let drawingPoints = [];
-        let gameState = 'WAITING_FOR_LIKE'; // WAITING_FOR_LIKE, DRAWING, SUCCESS, COUNTDOWN, DONE
+        let gameState = 'WAITING_FOR_LIKE'; 
         let countdownTimer = 5;
         let countdownInterval = null;
-        let earnedStars = 5;
+        let earnedStars = 3;
 
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         
@@ -225,7 +225,6 @@
             }
         }
 
-        // เช็คว่าทำท่ากดไลก์อยู่หรือไม่ (นิ้วโป้งชี้ขึ้น Y น้อยกว่าข้อนิ้วอื่นๆ และนิ้วอื่นพับกำปั้น)
         function isThumbsUp(landmarks) {
             const thumbTip = landmarks[4];
             const thumbIp = landmarks[3];
@@ -234,14 +233,12 @@
             const middleTip = landmarks[12];
             const middleMcp = landmarks[9];
 
-            // เช็คว่านิ้วโป้งอยู่สูงกว่า (ค่า Y น้อยกว่า) และนิ้วอื่นๆ กำอยู่
             const isThumbUp = thumbTip.y < thumbIp.y && thumbTip.y < indexMcp.y;
             const areOtherFingersClosed = indexTip.y > indexMcp.y && middleTip.y > middleMcp.y;
 
             return isThumbUp && areOtherFingersClosed;
         }
 
-        // เช็คว่าชูแต่นิ้วชี้อย่างเดียวหรือไม่
         function isIndexPointOnly(landmarks) {
             const indexTip = landmarks[8];
             const indexMcp = landmarks[5];
@@ -261,7 +258,6 @@
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
             canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
-            // วาดรูปต้นฉบับสระ ใ- ที่ลบพื้นหลังแล้วลงบนจอ
             if (guideImg.complete && guideImg.naturalWidth !== 0) {
                 let imgW = 160;
                 let imgH = 220;
@@ -269,7 +265,7 @@
                 let imgY = (canvasElement.height - imgH) / 2 - 20;
                 
                 canvasCtx.save();
-                canvasCtx.globalAlpha = 0.45; // ความโปร่งใสของรูปต้นฉบับ
+                canvasCtx.globalAlpha = 0.45;
                 canvasCtx.drawImage(guideImg, imgX, imgY, imgW, imgH);
                 canvasCtx.restore();
             }
@@ -298,9 +294,9 @@
                         const y = indexFingerTip.y * canvasElement.height;
 
                         drawingPoints.push({ x, y });
-                        if (drawingPoints.length > 350) drawingPoints.shift();
+                        if (drawingPoints.length > 400) drawingPoints.shift();
 
-                        checkDrawingAccuracy();
+                        checkDrawingEvaluation();
                     } else {
                         statusText.innerText = "กรุณายกเฉพาะ 'นิ้วชี้' เพื่อลากเส้นเขียน";
                         statusText.style.color = "#0984e3";
@@ -332,8 +328,9 @@
             }
         }
 
-        function checkDrawingAccuracy() {
-            if (drawingPoints.length > 100 && gameState === 'DRAWING') {
+        // ระบบประเมินคะแนนตามเกณฑ์ความสมบูรณ์ของการเขียน
+        function checkDrawingEvaluation() {
+            if (drawingPoints.length > 140 && gameState === 'DRAWING') {
                 let minX = Math.min(...drawingPoints.map(p => p.x));
                 let maxX = Math.max(...drawingPoints.map(p => p.x));
                 let minY = Math.min(...drawingPoints.map(p => p.y));
@@ -341,14 +338,21 @@
                 
                 let width = maxX - minX;
                 let height = maxY - minY;
+                let totalPoints = drawingPoints.length;
 
-                if (width > 40 && height > 70) {
-                    let score = 5;
-                    if (width < 60 || height < 90) score = 4;
-                    if (drawingPoints.length < 130) score = 3;
-                    
-                    triggerSuccessSequence(score);
+                // คำนวณเกณฑ์คะแนนตามขนาดและความต่อเนื่องของเส้นที่วาด
+                let score = 3;
+                if (width > 50 && height > 90 && totalPoints > 220) {
+                    score = 5; // เขียนครบสมบูรณ์ ตัวใหญ่และยาวพอดี
+                } else if (width > 35 && height > 70 && totalPoints > 160) {
+                    score = 4; // เขียนได้ดีพอใช้
+                } else if (totalPoints < 150) {
+                    score = 2; // เขียนน้อยเกินไป หรือลากไม่ครบ
+                } else {
+                    score = 3;
                 }
+                
+                triggerSuccessSequence(score);
             }
         }
 
@@ -364,7 +368,7 @@
 
             setTimeout(() => {
                 gameState = 'COUNTDOWN';
-                countdownTimer = 5; // ลดเหลือ 5 วินาทีตามต้องการ
+                countdownTimer = 5;
                 timerBadge.innerText = `ถ่ายรูปใน: ${countdownTimer}`;
 
                 countdownInterval = setInterval(() => {
@@ -389,11 +393,12 @@
             photoCanvas.height = videoElement.videoHeight || 480;
             const pCtx = photoCanvas.getContext('2d');
 
+            // แก้ไขปัญหารูปกลับด้านในภาพถ่าย โดยไม่ฟลิบซ้ายขวาตอนบันทึก
             pCtx.save();
-            pCtx.scale(-1, 1);
-            pCtx.drawImage(videoElement, -photoCanvas.width, 0, photoCanvas.width, photoCanvas.height);
+            pCtx.drawImage(videoElement, 0, 0, photoCanvas.width, photoCanvas.height);
             pCtx.restore();
 
+            // วาดเส้นลายมือลงบนภาพถ่ายในพิกัดที่ถูกต้องไม่สลับซ้ายขวา
             pCtx.save();
             if (drawingPoints.length > 1) {
                 pCtx.beginPath();
@@ -403,8 +408,10 @@
                 pCtx.lineJoin = 'round';
 
                 for (let i = 0; i < drawingPoints.length; i++) {
-                    if (i === 0) pCtx.moveTo(drawingPoints[i].x, drawingPoints[i].y);
-                    else pCtx.lineTo(drawingPoints[i].x, drawingPoints[i].y);
+                    // ปรับพิกัด X ให้ตรงกับภาพจริงที่ไม่ฟลิบ
+                    let fixedX = photoCanvas.width - drawingPoints[i].x;
+                    if (i === 0) pCtx.moveTo(fixedX, drawingPoints[i].y);
+                    else pCtx.lineTo(fixedX, drawingPoints[i].y);
                 }
                 pCtx.stroke();
             }
@@ -427,6 +434,7 @@
                 starStr += (i < earnedStars) ? "⭐" : "☆";
             }
             modalStars.innerText = starStr;
+            modalTitle.innerText = earnedStars >= 4 ? "🎉 ยอดเยี่ยมมาก!" : "👍 พยายามได้ดีมาก!";
 
             const dataUrl = photoCanvas.toDataURL('image/png');
             resultImage.src = dataUrl;
@@ -472,5 +480,8 @@
                 console.error(err);
             });
     </script>
+</body>
+</html>
+
 </body>
 </html>
