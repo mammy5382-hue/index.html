@@ -165,9 +165,10 @@
             <img id="resultImage" alt="รูปถ่ายผลงาน">
             <div>
                 <a id="downloadBtn" class="btn" download="สระใอไม้ม้วนของฉัน.png">📥 บันทึกรูปภาพ</a>
-                <a href="https://drive.google.com/drive/folders/1ztOpclQ9YkFk9rWhL3kJoiIQGOfwOids" target="_blank" class="btn btn-drive">📂 ส่งเข้า Google Drive</a>
+                <a href="https://drive.google.com/drive/folders/1ztOpclQ9YkFk9rWhL3kJoiIQGOfwOids" target="_blank" class="btn btn-drive">📂 เปิด Google Drive</a>
                 <button class="btn btn-retry" onclick="resetActivity()">🔄 ลองใหม่อีกครั้ง</button>
             </div>
+            <p style="font-size: 13px; color: #636e72; margin-top: 8px;">(กดบันทึกรูปภาพ แล้วอัปโหลดเข้า Google Drive ได้เลยครับ)</p>
         </div>
     </div>
 
@@ -220,12 +221,13 @@
             }
         }
 
-        // วาดเส้นไกด์ตัวอย่างสระ ใ-
+        // วาดเส้นไกด์ตัวอย่างสระ ใ- แบบถูกต้องตามแบบล่าสุด (หัวอยู่ด้านซ้าย วนขมวด และหางยาวลงมามีฐานโค้งขวา)
         function drawGuideTemplate(ctx) {
             ctx.save();
-            let cx = canvasElement.width / 2 + 20;
+            let cx = canvasElement.width / 2;
             let cy = canvasElement.height / 2 - 20;
 
+            // กรอบการ์ดฟ้าอ่อน
             ctx.strokeStyle = 'rgba(9, 132, 227, 0.4)';
             ctx.lineWidth = 6;
             ctx.strokeRect(cx - 70, cy - 120, 140, 240);
@@ -236,16 +238,16 @@
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
 
-            // หัวม้วน
+            // หัวม้วน (อยู่ด้านซ้ายของตัวสระ)
             ctx.beginPath();
-            ctx.arc(cx - 10, cy - 40, 30, 0, Math.PI * 2);
+            ctx.arc(cx - 15, cy - 40, 25, 0, Math.PI * 2);
             ctx.stroke();
 
-            // ลำตัวยาวลงมาด้านล่างและฐานโค้ง
+            // ลำตัวและฐานโค้งด้านขวา
             ctx.beginPath();
-            ctx.moveTo(cx + 20, cy - 40);
-            ctx.lineTo(cx + 20, cy + 60);
-            ctx.arc(cx, cy + 60, 20, 0, Math.PI, false);
+            ctx.moveTo(cx + 10, cy - 40);
+            ctx.lineTo(cx + 10, cy + 60);
+            ctx.arc(cx - 5, cy + 60, 15, 0, Math.PI, false);
             ctx.stroke();
 
             ctx.restore();
@@ -300,7 +302,6 @@
         }
 
         function checkDrawingAccuracy() {
-            // เพิ่มเงื่อนไขให้ต้องวาดเส้นจำนวนพิกเซลและจุดเยอะพอสมควรถึงจะผ่าน (ป้องกันการตัดจบไวเกินไป)
             if (drawingPoints.length > 120 && gameState === 'DRAWING') {
                 let minX = Math.min(...drawingPoints.map(p => p.x));
                 let maxX = Math.max(...drawingPoints.map(p => p.x));
@@ -310,9 +311,9 @@
                 let width = maxX - minX;
                 let height = maxY - minY;
 
-                if (width > 60 && height > 80) {
+                if (width > 50 && height > 80) {
                     let score = 5;
-                    if (width < 80 || height < 100) score = 4;
+                    if (width < 70 || height < 100) score = 4;
                     if (drawingPoints.length < 150) score = 3;
                     
                     triggerSuccessSequence(score);
@@ -357,20 +358,33 @@
             photoCanvas.height = videoElement.videoHeight || 480;
             const pCtx = photoCanvas.getContext('2d');
 
+            // วาดภาพจากกล้องให้ถูกต้องไม่ตีลังกา
             pCtx.save();
             pCtx.scale(-1, 1);
             pCtx.drawImage(videoElement, -photoCanvas.width, 0, photoCanvas.width, photoCanvas.height);
             pCtx.restore();
 
+            // วาดเส้นลายมือทับลงไปในทิศทางที่ถูกต้อง
             pCtx.save();
-            drawCurrentPath(pCtx);
+            if (drawingPoints.length > 1) {
+                pCtx.beginPath();
+                pCtx.strokeStyle = '#ff7675';
+                pCtx.lineWidth = 12;
+                pCtx.lineCap = 'round';
+                pCtx.lineJoin = 'round';
+
+                for (let i = 0; i < drawingPoints.length; i++) {
+                    if (i === 0) pCtx.moveTo(drawingPoints[i].x, drawingPoints[i].y);
+                    else pCtx.lineTo(drawingPoints[i].x, drawingPoints[i].y);
+                }
+                pCtx.stroke();
+            }
             pCtx.restore();
 
             pCtx.lineWidth = 15;
             pCtx.strokeStyle = '#ff7675';
             pCtx.strokeRect(0, 0, photoCanvas.width, photoCanvas.height);
 
-            // เอาแถบข้อความคำศัพท์ออก เหลือแค่หัวข้อรูปผลงานสะอาดๆ
             pCtx.fillStyle = 'rgba(255, 255, 255, 0.9)';
             pCtx.fillRect(20, 20, photoCanvas.width - 40, 50);
 
